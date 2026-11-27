@@ -1,0 +1,247 @@
+@baseUrl = http://127.0.0.1:8000/api
+
+###############################################################
+# AUTHENTICATION
+###############################################################
+
+### Register a new account
+POST {{baseUrl}}/register
+Content-Type: application/json
+
+{
+    "email": "john@example.com",
+    "username": "john",
+    "password": "password123"
+}
+
+### Register with invalid data (422)
+POST {{baseUrl}}/register
+Content-Type: application/json
+
+{
+    "email": "not-an-email",
+    "username": "j",
+    "password": "123"
+}
+
+### Login as a user (the token is reused by the requests below)
+# @name login
+POST {{baseUrl}}/login_check
+Content-Type: application/json
+
+{
+    "email": "john@example.com",
+    "password": "password123"
+}
+
+### Login as the admin (created with app:create-user --admin, see README)
+# @name adminLogin
+POST {{baseUrl}}/login_check
+Content-Type: application/json
+
+{
+    "email": "admin@example.com",
+    "password": "admin1234"
+}
+
+### Login with a wrong password (401)
+POST {{baseUrl}}/login_check
+Content-Type: application/json
+
+{
+    "email": "john@example.com",
+    "password": "wrong-password"
+}
+
+@token = {{login.response.body.token}}
+@adminToken = {{adminLogin.response.body.token}}
+
+### My account
+GET {{baseUrl}}/me
+Authorization: Bearer {{token}}
+
+### My account without a token (401)
+GET {{baseUrl}}/me
+
+###############################################################
+# MOVIES
+###############################################################
+
+### List movies (paginated)
+GET {{baseUrl}}/movies
+
+### Search movies by title and year, page 1, 5 per page
+GET {{baseUrl}}/movies?title=star&year=1977&page=1&limit=5
+
+### Movies of a category, sorted by title
+GET {{baseUrl}}/movies?category=1&sort=title&order=asc
+
+### Invalid search parameters (422)
+GET {{baseUrl}}/movies?limit=500&sort=unknown
+
+### Movie details (actors, average rating)
+GET {{baseUrl}}/movies/1
+
+### Unknown movie (404)
+GET {{baseUrl}}/movies/999999
+
+### Create a movie (admin)
+POST {{baseUrl}}/movies
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+    "title": "The Matrix",
+    "description": "A computer hacker learns about the true nature of reality.",
+    "director": "Lana Wachowski, Lilly Wachowski",
+    "releaseYear": 1999,
+    "runtime": 136,
+    "posterUrl": "https://example.com/matrix.jpg",
+    "categoryIds": [1, 2]
+}
+
+### Create an invalid movie (422)
+POST {{baseUrl}}/movies
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+    "title": "",
+    "releaseYear": 3000,
+    "posterUrl": "not-a-url"
+}
+
+### Create a movie as a simple user (403)
+POST {{baseUrl}}/movies
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+    "title": "Forbidden",
+    "releaseYear": 2020
+}
+
+### Update a movie (admin)
+PUT {{baseUrl}}/movies/1
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+    "title": "Updated title",
+    "description": "Updated description",
+    "releaseYear": 2001,
+    "runtime": 120,
+    "categoryIds": [1]
+}
+
+### Delete a movie (admin)
+DELETE {{baseUrl}}/movies/2
+Authorization: Bearer {{adminToken}}
+
+###############################################################
+# CATEGORIES
+###############################################################
+
+### List categories
+GET {{baseUrl}}/categories
+
+### Search categories by name
+GET {{baseUrl}}/categories?name=dra&page=1&limit=5
+
+### Category details
+GET {{baseUrl}}/categories/1
+
+### Create a category (admin)
+POST {{baseUrl}}/categories
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+    "name": "Cyberpunk"
+}
+
+### Create a category that already exists (422)
+POST {{baseUrl}}/categories
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+    "name": "Cyberpunk"
+}
+
+### Rename a category (admin)
+PUT {{baseUrl}}/categories/1
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+    "name": "Short films"
+}
+
+### Delete a category (admin)
+DELETE {{baseUrl}}/categories/3
+Authorization: Bearer {{adminToken}}
+
+###############################################################
+# RATINGS
+###############################################################
+
+### Rate a movie from 1 to 10 (201 the first time, 200 when updated)
+PUT {{baseUrl}}/movies/1/rating
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+    "score": 8,
+    "comment": "Great movie!"
+}
+
+### Invalid score (422)
+PUT {{baseUrl}}/movies/1/rating
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+    "score": 11
+}
+
+### Ratings of a movie
+GET {{baseUrl}}/movies/1/ratings?page=1&limit=10
+
+### My latest ratings
+GET {{baseUrl}}/me/ratings
+Authorization: Bearer {{token}}
+
+### Delete my rating
+DELETE {{baseUrl}}/movies/1/rating
+Authorization: Bearer {{token}}
+
+###############################################################
+# USERS, FOLLOWERS AND FEED
+###############################################################
+
+### Public profile of a user
+GET {{baseUrl}}/users/1
+
+### Latest ratings of a user
+GET {{baseUrl}}/users/1/ratings
+
+### Follow a user
+POST {{baseUrl}}/users/1/follow
+Authorization: Bearer {{token}}
+
+### Users I follow
+GET {{baseUrl}}/me/following
+Authorization: Bearer {{token}}
+
+### My followers
+GET {{baseUrl}}/me/followers
+Authorization: Bearer {{token}}
+
+### Feed: latest ratings of the users I follow
+GET {{baseUrl}}/feed?page=1&limit=10
+Authorization: Bearer {{token}}
+
+### Unfollow a user
+DELETE {{baseUrl}}/users/1/follow
+Authorization: Bearer {{token}}

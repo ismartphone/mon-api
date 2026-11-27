@@ -1,0 +1,7 @@
+lexik_jwt_authentication:
+    secret_key: '%env(resolve:JWT_SECRET_KEY)%'
+    public_key: '%env(resolve:JWT_PUBLIC_KEY)%'
+    pass_phrase: '%env(JWT_PASSPHRASE)%'
+    # The User entity has a "username" property (display name) that differs from
+    # its identifier (email): store the email in the token so the provider finds the user.
+    user_id_claim: email
